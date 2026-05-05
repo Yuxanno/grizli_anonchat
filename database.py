@@ -1,8 +1,9 @@
+import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
 from config import MONGO_URL
 
-client = AsyncIOMotorClient(MONGO_URL)
+client = AsyncIOMotorClient(MONGO_URL, tlsCAFile=certifi.where())
 db = client.grizli_chat
 users = db.users
 
