@@ -1,8 +1,9 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 
 def get_main_menu_kb():
     kb = [
         [KeyboardButton(text="🐻 Выбрать берлогу")],
+        [KeyboardButton(text="⚡️ Быстрый поиск")],
         [KeyboardButton(text="👤 Мой профиль")]
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
@@ -28,3 +29,9 @@ def get_stop_search_kb():
         [KeyboardButton(text="🔙 Выход в меню")]
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
+
+def get_profile_kb():
+    kb = [
+        [InlineKeyboardButton(text="📝 Изменить возраст", callback_data="edit_age")]
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=kb)

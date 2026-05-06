@@ -14,18 +14,11 @@ CATEGORIES = [
     "✅ Зона дзен"
 ]
 
-@router.message(F.text.in_(CATEGORIES))
-async def start_searching(message: Message):
-    user = await get_user(message.from_user.id)
-    
-    if not user or user.get("age") is None:
-        return await message.answer("Сначала скажи, сколько тебе зим, охотник! 🐻")
-    
-    category = message.text
+async def execute_search(message: Message, user: dict, category: str):
     if category == "✅ Ночной лес (18+)" and user.get("age", 0) < 18:
         return await message.answer("Маловат еще для этого леса. Охоться в других местах! 🐻")
     
-    await update_user(message.from_user.id, status="searching", category=category)
+    await update_user(message.from_user.id, status="searching", category=category, last_category=category)
     await message.answer(f"🔍 Жди, ищу тебе достойного зверя в {category}... 🐻", reply_markup=get_stop_search_kb())
     
     partner = await find_partner(message.from_user.id, category, user.get("age"))
@@ -42,7 +35,27 @@ async def start_searching(message: Message):
             await end_chat(partner["_id"])
             await message.answer("Зверь сорвался с крючка... Ищу другого. 🛡")
             # Restart search
-            await start_searching(message)
+            await execute_search(message, user, category)
+
+@router.message(F.text.in_(CATEGORIES))
+async def start_searching(message: Message):
+    user = await get_user(message.from_user.id)
+    if not user or user.get("age") is None:
+        return await message.answer("Сначала скажи, сколько тебе зим, охотник! 🐻")
+    
+    await execute_search(message, user, message.text)
+
+@router.message(F.text == "⚡️ Быстрый поиск")
+async def quick_search(message: Message):
+    user = await get_user(message.from_user.id)
+    if not user or user.get("age") is None:
+        return await message.answer("Сначала скажи, сколько тебе зим, охотник! 🐻")
+    
+    last_category = user.get("last_category")
+    if not last_category:
+        return await message.answer("Ты еще не охотился ни в одной берлоге. Выбери сначала! 🐻", reply_markup=get_main_menu_kb())
+    
+    await execute_search(message, user, last_category)
 
 @router.message(F.text == "🔄 Следующий")
 async def next_partner(message: Message):
@@ -62,20 +75,7 @@ async def next_partner(message: Message):
     await message.answer("Ищу нового зверя... 🛡")
     
     # Re-trigger search logic
-    await update_user(message.from_user.id, status="searching", category=category)
-    partner = await find_partner(message.from_user.id, category, user.get("age"))
-    
-    if partner:
-        await start_chat(message.from_user.id, partner["_id"])
-        msg = "Собеседник в берлоге! Начинай рычать. 🐻🎭"
-        await message.answer(msg, reply_markup=get_chat_kb())
-        try:
-            await message.bot.send_message(partner["_id"], msg, reply_markup=get_chat_kb())
-        except Exception:
-            await end_chat(partner["_id"])
-            await message.answer("Зверь сорвался... Продолжаю поиск. 🐻")
-    else:
-        await message.answer(f"🔍 Жди, ищу тебе достойного зверя в {category}... 🐻", reply_markup=get_stop_search_kb())
+    await execute_search(message, user, category)
 
 @router.message()
 async def relay_message(message: Message):
@@ -83,7 +83,7 @@ async def relay_message(message: Message):
     if not user or user["status"] != "chatting":
         return
     
-    if message.text in ["🔄 Следующий", "🔙 Выход в меню", "🐻 Выбрать берлогу", "👤 Мой профиль"]:
+    if message.text in ["🔄 Следующий", "🔙 Выход в меню", "🐻 Выбрать берлогу", "👤 Мой профиль", "⚡️ Быстрый поиск"]:
         return
 
     partner_id = user["partner_id"]

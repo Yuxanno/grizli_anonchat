@@ -16,6 +16,7 @@ async def create_user(user_id: int):
         "age": None,
         "status": "idle",
         "category": None,
+        "last_category": None,
         "partner_id": None,
         "last_activity": datetime.now().isoformat()
     }
