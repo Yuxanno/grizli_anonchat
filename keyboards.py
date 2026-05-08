@@ -8,18 +8,18 @@ def get_main_menu_kb():
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
 
-def get_gender_kb():
+def get_gender_kb(mode: str = "set"):
     kb = [
-        [InlineKeyboardButton(text="🧔 Мужской", callback_data="set_gender_M")],
-        [InlineKeyboardButton(text="👩 Женский", callback_data="set_gender_F")]
+        [InlineKeyboardButton(text="🧔 Мужской", callback_data=f"{mode}_gender_M")],
+        [InlineKeyboardButton(text="👩 Женский", callback_data=f"{mode}_gender_F")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
-def get_target_gender_kb():
+def get_target_gender_kb(mode: str = "set"):
     kb = [
-        [InlineKeyboardButton(text="🧔 Мужчин", callback_data="set_target_M")],
-        [InlineKeyboardButton(text="👩 Женщин", callback_data="set_target_F")],
-        [InlineKeyboardButton(text="🐾 Всех", callback_data="set_target_Any")]
+        [InlineKeyboardButton(text="🧔 Мужчин", callback_data=f"{mode}_target_M")],
+        [InlineKeyboardButton(text="👩 Женщин", callback_data=f"{mode}_target_F")],
+        [InlineKeyboardButton(text="🐾 Всех", callback_data=f"{mode}_target_Any")]
     ]
     return InlineKeyboardMarkup(inline_keyboard=kb)
 

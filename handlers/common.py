@@ -143,13 +143,27 @@ async def cmd_profile(message: Message):
 @router.callback_query(F.data == "edit_gender")
 async def process_edit_gender(callback: types.CallbackQuery):
     from keyboards import get_gender_kb
-    await callback.message.edit_text("Выбери свой пол: 🛡", reply_markup=get_gender_kb())
+    await callback.message.answer("Выбери свой пол: 🛡", reply_markup=get_gender_kb(mode="update"))
     await callback.answer()
 
 @router.callback_query(F.data == "edit_target")
 async def process_edit_target(callback: types.CallbackQuery):
     from keyboards import get_target_gender_kb
-    await callback.message.edit_text("Кого ты хочешь найти? 🐾", reply_markup=get_target_gender_kb())
+    await callback.message.answer("Кого ты хочешь найти? 🐾", reply_markup=get_target_gender_kb(mode="update"))
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("update_gender_"))
+async def process_update_gender(callback: types.CallbackQuery):
+    gender = callback.data.split("_")[-1]
+    await update_user(callback.from_user.id, gender=gender)
+    await callback.message.edit_text("✅ Твой пол успешно обновлен!")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("update_target_"))
+async def process_update_target(callback: types.CallbackQuery):
+    target = callback.data.split("_")[-1]
+    await update_user(callback.from_user.id, target_gender=target)
+    await callback.message.edit_text("✅ Твои предпочтения обновлены!")
     await callback.answer()
 
 @router.callback_query(F.data == "edit_age")
