@@ -12,13 +12,13 @@ router = Router()
 LOGO_PATH = "logo.png"
 
 CATEGORY_DESCRIPTIONS = (
-    "🐻 **Выбирай свою берлогу:**\n\n"
-    "💻 **✅ IT-берлога**: Обсуждай код, серверы и девайсы без лишних глаз.\n"
-    "🌙 **✅ Ночной лес (18+)**: Анонимный флирт и знакомства. Мы уважаем приватность.\n"
-    "🎮 **✅ Игровая пещера**: Ищи тимейтов, обсуждай катки без токсичности.\n"
-    "👂 **✅ Подслушано в лесу**: Анонимные истории, сплетни и признания.\n"
-    "💼 **✅ Биржа охотников**: Честные разговоры о работе и зарплатах.\n"
-    "🧘 **✅ Зона дзен**: Глубокие разговоры о жизни и психологии."
+    "🏰 **ДОСТУПНЫЕ БЕРЛОГИ:**\n\n"
+    "💻 **IT-берлога**: Обсуждай код, серверы и девайсы.\n"
+    "🌙 **Ночной лес (18+)**: Анонимный флирт и знакомства.\n"
+    "🎮 **Игровая пещера**: Ищи тимейтов и обсуждай катки.\n"
+    "👂 **Подслушано в лесу**: Истории, сплетни и признания.\n"
+    "💼 **Биржа охотников**: О работе и зарплатах.\n"
+    "🧘 **Зона дзен**: Психология и разговоры о жизни."
 )
 
 class RegistrationStates(StatesGroup):
@@ -124,15 +124,19 @@ async def cmd_profile(message: Message):
     gender_map = {"M": "🧔 Мужской", "F": "👩 Женский", None: "Не указан"}
     target_map = {"M": "🧔 Мужчин", "F": "👩 Женщин", "Any": "🐾 Всех"}
     
-    selected_cats = ", ".join(user.get("selected_categories", [])) or "Не выбраны"
+    selected = user.get("selected_categories", [])
+    if len(selected) > 3:
+        cats_str = f"{len(selected)} берлог"
+    else:
+        cats_str = ", ".join(selected) or "Не выбраны"
     
     profile_text = (
-        f"👤 **Твой профиль:**\n"
-        f"🐻 Возраст: {user.get('age', 'Не указан')}\n"
-        f"🎭 Пол: {gender_map.get(user.get('gender'))}\n"
-        f"🔍 Ищу: {target_map.get(user.get('target_gender', 'Any'))}\n"
-        f"📍 Выбранные берлоги: {selected_cats}\n"
-        f"💾 Статус: {user.get('status', 'idle')}"
+        f"👤 **ТВОЙ ПРОФИЛЬ:**\n\n"
+        f"🎂 **Возраст:** {user.get('age', '—')}\n"
+        f"🎭 **Пол:** {gender_map.get(user.get('gender'))}\n"
+        f"🔍 **Ищу:** {target_map.get(user.get('target_gender', 'Any'))}\n"
+        f"📍 **Берлоги:** {cats_str}\n"
+        f"💾 **Статус:** `{user.get('status', 'idle')}`"
     )
     await message.answer(profile_text, reply_markup=get_profile_kb(), parse_mode="Markdown")
 

@@ -24,30 +24,34 @@ def get_target_gender_kb():
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 def get_categories_kb(selected_categories: list):
-    categories = [
-        "✅ IT-берлога", "✅ Ночной лес (18+)",
-        "✅ Игровая пещера", "✅ Подслушано в лесу",
-        "✅ Биржа охотников", "✅ Зона дзен"
-    ]
+    categories = {
+        "IT-берлога": "💻",
+        "Ночной лес (18+)": "🌙",
+        "Игровая пещера": "🎮",
+        "Подслушано в лесу": "👂",
+        "Биржа охотников": "💼",
+        "Зона дзен": "🧘"
+    }
     
     buttons = []
+    keys = list(categories.keys())
     # Create 2 columns
-    for i in range(0, len(categories), 2):
+    for i in range(0, len(keys), 2):
         row = []
         for j in range(2):
-            if i + j < len(categories):
-                cat = categories[i+j]
+            if i + j < len(keys):
+                cat = keys[i+j]
+                icon = categories[cat]
                 is_selected = cat in selected_categories
-                prefix = "🟢 " if is_selected else "⚪️ "
+                status = "🟢" if is_selected else "🔘"
                 row.append(InlineKeyboardButton(
-                    text=f"{prefix}{cat}", 
+                    text=f"{status} {icon} {cat}", 
                     callback_data=f"toggle_cat_{cat}"
                 ))
         buttons.append(row)
     
-    # Add Start button if at least one category is selected
     if selected_categories:
-        buttons.append([InlineKeyboardButton(text="🔥 Начать поиск", callback_data="start_search_multi")])
+        buttons.append([InlineKeyboardButton(text="🔥 НАЧАТЬ ПОИСК", callback_data="start_search_multi")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

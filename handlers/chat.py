@@ -6,12 +6,12 @@ from keyboards import get_chat_kb, get_main_menu_kb, get_stop_search_kb
 router = Router()
 
 CATEGORIES = [
-    "✅ IT-берлога", 
-    "✅ Ночной лес (18+)", 
-    "✅ Игровая пещера", 
-    "✅ Подслушано в лесу", 
-    "✅ Биржа охотников",
-    "✅ Зона дзен"
+    "IT-берлога", 
+    "Ночной лес (18+)", 
+    "Игровая пещера", 
+    "Подслушано в лесу", 
+    "Биржа охотников",
+    "Зона дзен"
 ]
 
 async def execute_search(message: Message, user: dict, categories: list):
@@ -30,8 +30,12 @@ async def execute_search(message: Message, user: dict, categories: list):
 
     await update_user(message.from_user.id, status="searching", selected_categories=categories)
     
-    cats_str = ", ".join(categories)
-    await message.answer(f"🔍 Жди, ищу тебе достойного зверя в берлогах: {cats_str}... 🐻", reply_markup=get_stop_search_kb())
+    if len(categories) > 2:
+        cats_info = f"{len(categories)} берлогах"
+    else:
+        cats_info = ", ".join([f"**{c}**" for c in categories])
+    
+    await message.answer(f"🔍 Ищу тебе достойного зверя в {cats_info}... 🐾", reply_markup=get_stop_search_kb(), parse_mode="Markdown")
     
     partner = await find_partner(
         message.from_user.id, 
