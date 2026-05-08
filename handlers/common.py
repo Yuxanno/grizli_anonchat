@@ -11,10 +11,6 @@ router = Router()
 
 LOGO_PATH = "logo.png"
 
-class RegistrationStates(StatesGroup):
-    waiting_for_age = State()
-    waiting_for_new_age = State()
-
 CATEGORY_DESCRIPTIONS = (
     "🐻 **Выбирай свою берлогу:**\n\n"
     "💻 **✅ IT-берлога**: Обсуждай код, серверы и девайсы без лишних глаз.\n"
@@ -25,12 +21,24 @@ CATEGORY_DESCRIPTIONS = (
     "🧘 **✅ Зона дзен**: Глубокие разговоры о жизни и психологии."
 )
 
+class RegistrationStates(StatesGroup):
+    waiting_for_age = State()
+    waiting_for_new_age = State()
+
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     user = await get_user(message.from_user.id)
     if not user:
         user = await create_user(message.from_user.id)
     
+    # Ban check
+    if user.get("ban_until"):
+        ban_until = datetime.fromisoformat(user["ban_until"])
+        if ban_until > datetime.now():
+            remaining = ban_until - datetime.now()
+            mins, secs = divmod(int(remaining.total_seconds()), 60)
+            return await message.answer(f"🛑 Ты временно изгнан из леса. \nОсталось: {mins} мин. {secs} сек. 🐻")
+
     greeting = (
         "🐻 Привет! Добро пожаловать в **Anon Griz Chat**. 🎭\n\n"
         "Здесь ты можешь найти собеседника в разных берлогах и пообщаться анонимно. 🛡"
@@ -48,6 +56,9 @@ async def cmd_start(message: Message, state: FSMContext):
     if user.get("age") is None:
         await message.answer("Прежде чем пущу в лес — сколько тебе лет? Введи только цифру. 🐻")
         await state.set_state(RegistrationStates.waiting_for_age)
+    elif user.get("gender") is None:
+        from keyboards import get_gender_kb
+        await message.answer("Укажи свой пол: 🛡", reply_markup=get_gender_kb())
     else:
         await message.answer(
             "Выбирай берлогу, охотник! 🛡",
@@ -66,10 +77,29 @@ async def process_age(message: Message, state: FSMContext):
     await update_user(message.from_user.id, age=age)
     await state.clear()
     
-    await message.answer(
-        "Теперь ты один из нас. Выбирай категорию и начинай рычать! 🛡",
+    from keyboards import get_gender_kb
+    await message.answer(f"Принято! Тебе {age}. Теперь укажи свой пол: 🛡", reply_markup=get_gender_kb())
+
+@router.callback_query(F.data.startswith("set_gender_"))
+async def process_set_gender(callback: types.CallbackQuery):
+    gender = callback.data.split("_")[-1]
+    await update_user(callback.from_user.id, gender=gender)
+    
+    from keyboards import get_target_gender_kb
+    await callback.message.edit_text("Отлично! А кого ты ищешь в этом лесу? 🐾", reply_markup=get_target_gender_kb())
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("set_target_"))
+async def process_set_target(callback: types.CallbackQuery):
+    target = callback.data.split("_")[-1]
+    await update_user(callback.from_user.id, target_gender=target)
+    
+    await callback.message.delete()
+    await callback.message.answer(
+        "Все готово! Выбирай берлогу и начинай охоту. 🛡",
         reply_markup=get_main_menu_kb()
     )
+    await callback.answer()
 
 @router.message(F.text == "🐻 Выбрать берлогу")
 @router.message(F.text == "🔙 Назад")
@@ -78,21 +108,45 @@ async def cmd_choose_den(message: Message):
     if not user or user.get("age") is None:
         return await message.answer("Сначала скажи, сколько тебе зим! 🐻")
     
-    await message.answer(CATEGORY_DESCRIPTIONS, reply_markup=get_categories_kb(), parse_mode="Markdown")
+    from keyboards import get_categories_kb
+    selected = user.get("selected_categories", [])
+    await message.answer(
+        CATEGORY_DESCRIPTIONS + "\n\n*Выбери одну или несколько берлог:*", 
+        reply_markup=get_categories_kb(selected), 
+        parse_mode="Markdown"
+    )
 
 @router.message(F.text == "👤 Мой профиль")
 async def cmd_profile(message: Message):
     user = await get_user(message.from_user.id)
     if not user: return
     
+    gender_map = {"M": "🧔 Мужской", "F": "👩 Женский", None: "Не указан"}
+    target_map = {"M": "🧔 Мужчин", "F": "👩 Женщин", "Any": "🐾 Всех"}
+    
+    selected_cats = ", ".join(user.get("selected_categories", [])) or "Не выбраны"
+    
     profile_text = (
         f"👤 **Твой профиль:**\n"
         f"🐻 Возраст: {user.get('age', 'Не указан')}\n"
-        f"🎭 Статус: {user.get('status', 'idle')}\n"
-        f"📍 Категория: {user.get('category', 'Нет')}\n"
-        f"💾 Сохраненная категория: {user.get('last_category', 'Нет')}"
+        f"🎭 Пол: {gender_map.get(user.get('gender'))}\n"
+        f"🔍 Ищу: {target_map.get(user.get('target_gender', 'Any'))}\n"
+        f"📍 Выбранные берлоги: {selected_cats}\n"
+        f"💾 Статус: {user.get('status', 'idle')}"
     )
     await message.answer(profile_text, reply_markup=get_profile_kb(), parse_mode="Markdown")
+
+@router.callback_query(F.data == "edit_gender")
+async def process_edit_gender(callback: types.CallbackQuery):
+    from keyboards import get_gender_kb
+    await callback.message.edit_text("Выбери свой пол: 🛡", reply_markup=get_gender_kb())
+    await callback.answer()
+
+@router.callback_query(F.data == "edit_target")
+async def process_edit_target(callback: types.CallbackQuery):
+    from keyboards import get_target_gender_kb
+    await callback.message.edit_text("Кого ты хочешь найти? 🐾", reply_markup=get_target_gender_kb())
+    await callback.answer()
 
 @router.callback_query(F.data == "edit_age")
 async def process_edit_age_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -125,8 +179,9 @@ async def cmd_stop_search(message: Message):
         from database import end_chat
         partner_id = await end_chat(message.from_user.id)
         if partner_id:
+            from keyboards import get_rating_kb
             try:
-                await message.bot.send_message(partner_id, "Собеседник покинул берлогу... 🐻", reply_markup=get_main_menu_kb())
+                await message.bot.send_message(partner_id, "Собеседник покинул берлогу... Оцени его: 🐻", reply_markup=get_rating_kb(message.from_user.id))
             except Exception:
                 pass
         
